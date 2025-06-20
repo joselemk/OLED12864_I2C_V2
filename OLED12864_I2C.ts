@@ -127,44 +127,42 @@ namespace OLED12864_I2C {
             if (col > (MAX_X - 6)) return
         }
     }
-  /**
-   * show mirrored text in OLED
-   * @param x is X alis, eg: 0
-   * @param y is Y alis, eg: 0
-   * @param s is the text to display mirrored, eg: 'Hello!'
-   * @param color is string color, eg: 1
-   */
-  //% blockId="OLED12864_I2C_SHOWSTRING_MIRRORED" block="show mirrored string at x %x|y %y|text %s|color %color"
-  //% weight=79 blockGap=8
-  //% parts=OLED12864_I2C trackArgs=0
-  export function showStringMirrored(
-    x: number,
-    y: number,
-    s: string,
-    color: number = 1
-  ) {
-    let col = 0;
-    let p = 0;
-    let ind = 0;
-    for (let n = 0; n < s.length; n++) {
-      p = font[s.charCodeAt(s.length - 1 - n)]; // draw characters in reverse order
-      for (let i = 0; i < 5; i++) {
-        col = 0;
-        for (let j = 0; j < 5; j++) {
-          if (p & (1 << (5 * i + j))) col |= 1 << (5 - j); // mirror bits
+      /**
+     * show mirrored text in OLED
+     */
+    //% blockId="OLED12864_I2C_SHOWSTRING_MIRRORED" block="show mirrored string %s|at col %col|row %row|color %color"
+    //% s.defl="Hello"
+    //% col.max=120 col.min=0 col.defl=0
+    //% row.max=7 row.min=0 row.defl=0
+    //% color.max=1 color.min=0 color.defl=1
+    //% weight=79 blockGap=8 inlineInputMode=inline
+    export function StringMirrored(s: string, col: number, row: number, color: number = 1) {
+        for (let n = 0; n < s.length; n++) {
+            let c = s.charAt(s.length - 1 - n)
+            let p = (Math.min(127, Math.max(c.charCodeAt(0), 32)) - 32) * 5
+            let ind = col + row * 128 + 1
+
+            for (let i = 0; i < 5; i++) {
+                let original = Font_5x7[p + i]
+                let mirrored = 0
+                for (let b = 0; b < 8; b++) {
+                    if (original & (1 << b)) {
+                        mirrored |= (1 << (7 - b))
+                    }
+                }
+                _screen[ind + i] = (color > 0) ? mirrored : mirrored ^ 0xFF
+                _buf7[i + 1] = _screen[ind + i]
+            }
+
+            _screen[ind + 5] = (color > 0) ? 0 : 0xFF
+            _buf7[6] = _screen[ind + 5]
+            set_pos(col, row)
+            pins.i2cWriteBuffer(_I2CAddr, _buf7)
+
+            col += 6
+            if (col > (MAX_X - 6)) return
         }
-        ind = (x + n) * 5 * (_ZOOM + 1) + y * 128 + i * (_ZOOM + 1) + 1;
-        if (color == 0) col = 255 - col;
-        _screen[ind] = col;
-        if (_ZOOM) _screen[ind + 1] = col;
-      }
     }
-    set_pos(x * 5, y);
-    let ind0 = x * 5 * (_ZOOM + 1) + y * 128;
-    let buf = _screen.slice(ind0, ind + 1);
-    buf[0] = 0x40;
-    pins.i2cWriteBuffer(_I2CAddr, buf);
-  }
     /**
      * show a number in OLED
      */
